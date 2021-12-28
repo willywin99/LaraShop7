@@ -34,11 +34,13 @@ class CategoryRequest extends FormRequest
         $id = (int) $this->get('id');
 
         if ($this->method() == 'PUT') {
-            if ($parentId > 0) {
-                $name = 'required|unique:categories,name,'.$id.',id,parent_id,'.$parentId;
-            } else {
-                $name = 'required|unique:categories,name,'.$id;
-            }
+            // if ($parentId > 0) {
+            //     $name = 'required|unique:categories,name,'.$id.',id,parent_id,'.$parentId;
+            // } else {
+            //     $name = 'required|unique:categories,name,'.$id;
+            // }
+
+            $name = 'required|unique:categories,name,'.$id.',id,parent_id,'.$parentId;
 
             $slug = 'unique:categories,slug,'.$id;
 

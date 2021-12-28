@@ -5,19 +5,25 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CategoryRequest;
 
-use App\Models\Category;
+// use App\Models\Category;
 
-use Str;
+// use Str;
 use Session;
 
 use App\Authorizable;
+
+use App\Repositories\Admin\Interfaces\CategoryRepositoryInterface;
 
 class CategoryController extends Controller
 {
     use Authorizable;
 
-    public function __construct() {
+    private $categoryRepository;
+
+    public function __construct(CategoryRepositoryInterface $categoryRepository) {
         parent::__construct();
+
+        $this->categoryRepository = $categoryRepository;
 
         $this->data['currentAdminMenu'] = 'catalog';
         $this->data['currentAdminSubMenu'] = 'category';
@@ -29,7 +35,8 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $this->data['categories'] = Category::orderBy('name', 'ASC')->paginate(10);
+        // $this->data['categories'] = Category::orderBy('name', 'ASC')->paginate(10);
+        $this->data['categories'] = $this->categoryRepository->paginate(10);
 
         return view('admin.categories.index', $this->data);
     }
@@ -41,10 +48,8 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        $categories = Category::orderBy('name', 'asc')->get();
-
-        $this->data['categories'] = $categories->toArray();
-        $this->data['category'] = null;
+        $this->data['categories'] = $this->categoryRepository->getCategoryDropdown();
+        // $this->data['category'] = null;
 
         return view('admin.categories.form', $this->data);
     }
@@ -57,26 +62,26 @@ class CategoryController extends Controller
      */
     public function store(CategoryRequest $request)
     {
-        $params = $request->except('_token');
-        $params['slug'] = Str::slug($params['name']);
-        $params['parent_id'] = (int)$params['parent_id'];
+        // $params = $request->except('_token');
+        // $params['slug'] = Str::slug($params['name']);
+        // $params['parent_id'] = (int)$params['parent_id'];
 
-        if (Category::create($params)) {
+        if ($this->categoryRepository->create($request)) {
             Session::flash('success', 'Category has been saved');
         }
         return redirect('admin/categories');
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show($id)
-    {
-        //
-    }
+    // /**
+    //  * Display the specified resource.
+    //  *
+    //  * @param  int  $id
+    //  * @return \Illuminate\Http\Response
+    //  */
+    // public function show($id)
+    // {
+    //     //
+    // }
 
     /**
      * Show the form for editing the specified resource.
@@ -86,11 +91,15 @@ class CategoryController extends Controller
      */
     public function edit($id)
     {
-        $category = Category::findOrFail($id);
-        $categories = Category::where('id', '!=', $id)->orderBy('name', 'asc')->get();
+        // $category = Category::findOrFail($id);
+        // $category = $this->categoryRepository->findById($id);
+        // $categories = Category::where('id', '!=', $id)->orderBy('name', 'asc')->get();
+        // $categories = $this->categoryRepository->getCategoryDropdown($id);
 
-        $this->data['categories'] = $categories->toArray();
-        $this->data['category'] = $category;
+        // $this->data['categories'] = $categories->toArray();
+        $this->data['categories'] = $this->categoryRepository->getCategoryDropdown($id);
+        $this->data['category'] = $this->categoryRepository->findById($id);
+
         return view('admin.categories.form', $this->data);
     }
 
@@ -103,12 +112,12 @@ class CategoryController extends Controller
      */
     public function update(CategoryRequest $request, $id)
     {
-        $params = $request->except('_token');
-        $params['slug'] = Str::slug($params['name']);
-        $params['parent_id'] = (int)$params['parent_id'];
+        // $params = $request->except('_token');
+        // $params['slug'] = Str::slug($params['name']);
+        // $params['parent_id'] = (int)$params['parent_id'];
 
-        $category = Category::findOrFail($id);
-        if ($category->update($params)) {
+        // $category = Category::findOrFail($id);
+        if ($this->categoryRepository->update($request, $id)) {
             Session::flash('success', 'Category has been updated.');
         }
 
@@ -123,9 +132,9 @@ class CategoryController extends Controller
      */
     public function destroy($id)
     {
-        $category  = Category::findOrFail($id);
+        // $category  = Category::findOrFail($id);
 
-        if ($category->delete()) {
+        if ($this->categoryRepository->delete($id)) {
             Session::flash('success', 'Category has been deleted');
         }
 
