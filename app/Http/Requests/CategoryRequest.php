@@ -52,6 +52,7 @@ class CategoryRequest extends FormRequest
         return [
             'name' => $name,
             'slug' => $slug,
+            'parent_id' => '',
         ];
     }
 }

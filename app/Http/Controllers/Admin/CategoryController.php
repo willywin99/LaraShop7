@@ -62,11 +62,12 @@ class CategoryController extends Controller
      */
     public function store(CategoryRequest $request)
     {
+        $params = $request->validated();
         // $params = $request->except('_token');
         // $params['slug'] = Str::slug($params['name']);
         // $params['parent_id'] = (int)$params['parent_id'];
 
-        if ($this->categoryRepository->create($request)) {
+        if ($this->categoryRepository->create($params)) {
             Session::flash('success', 'Category has been saved');
         }
         return redirect('admin/categories');
@@ -112,12 +113,15 @@ class CategoryController extends Controller
      */
     public function update(CategoryRequest $request, $id)
     {
+        $params = $request->validated();
+        // dd($params);
         // $params = $request->except('_token');
         // $params['slug'] = Str::slug($params['name']);
         // $params['parent_id'] = (int)$params['parent_id'];
 
         // $category = Category::findOrFail($id);
-        if ($this->categoryRepository->update($request, $id)) {
+        // if ($this->categoryRepository->update($request, $id)) {
+        if ($this->categoryRepository->update($params, $id)) {
             Session::flash('success', 'Category has been updated.');
         }
 

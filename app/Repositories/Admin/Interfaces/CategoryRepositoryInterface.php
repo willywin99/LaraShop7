@@ -11,9 +11,11 @@ interface CategoryRepositoryInterface
 
     public function getCategoryDropdown(int $exceptId = null);
 
-    public function create(CategoryRequest $categoryRequest);
+    // public function create(CategoryRequest $categoryRequest);
+    public function create($params);
 
-    public function update(CategoryRequest $categoryRequest, int $categoryId);
+    // public function update(CategoryRequest $categoryRequest, int $categoryId);
+    public function update($params, int $categoryId);
 
     public function delete(int $categoryId);
 }
