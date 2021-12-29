@@ -86,6 +86,8 @@ class CategoryRepository implements CategoryRepositoryInterface
             $params['parent_id'] = 0;
         }
 
+        // dd($params);
+
         $category = Category::findOrFail($id);
 
         try {

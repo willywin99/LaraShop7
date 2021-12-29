@@ -7,13 +7,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ProductRequest;
 use App\Http\Requests\ProductImageRequest;
 
-use App\Models\Product;
-use App\Models\Category;
-use App\Models\ProductImage;
-use App\Models\Attribute;
-use App\Models\AttributeOption;
-use App\Models\ProductAttributeValue;
-use App\Models\ProductInventory;
+// use App\Models\Product;
+// use App\Models\Category;
+// use App\Models\ProductImage;
+// use App\Models\Attribute;
+// use App\Models\AttributeOption;
+// use App\Models\ProductAttributeValue;
+// use App\Models\ProductInventory;
 
 use Str;
 use Auth;
@@ -21,24 +21,43 @@ use DB;
 use Session;
 use App\Authorizable;
 
+use App\Repositories\Admin\Interfaces\ProductRepositoryInterface;
+use App\Repositories\Admin\Interfaces\AttributeRepositoryInterface;
+use App\Repositories\Admin\Interfaces\CategoryRepositoryInterface;
+
+
 class ProductController extends Controller
 {
 	use Authorizable;
+
+    private $_productRepository;
+    private $_attributeRepository;
+    private $_categoryRepository;
 
 	/**
 	 * Create a new controller instance.
 	 *
 	 * @return void
 	 */
-	public function __construct()
+	public function __construct(
+        ProductRepositoryInterface $productRepository,
+        AttributeRepositoryInterface $attributeRepository,
+        CategoryRepositoryInterface $categoryRepository
+    )
 	{
 		parent::__construct();
+
+        $this->_productRepository = $productRepository;
+        $this->_attributeRepository = $attributeRepository;
+        $this->_categoryRepository = $categoryRepository;
 
 		$this->data['currentAdminMenu'] = 'catalog';
 		$this->data['currentAdminSubMenu'] = 'product';
 
-		$this->data['statuses'] = Product::statuses();
-		$this->data['types'] = Product::types();
+		// $this->data['statuses'] = Product::statuses();
+		$this->data['statuses'] = $this->_productRepository->statuses();
+		// $this->data['types'] = Product::types();
+		$this->data['types'] = $this->_productRepository->types();
 	}
 	/**
 	 * Display a listing of the resource.
@@ -47,7 +66,8 @@ class ProductController extends Controller
 	 */
 	public function index()
 	{
-		$this->data['products'] = Product::orderBy('name', 'ASC')->paginate(10);
+		// $this->data['products'] = Product::orderBy('name', 'ASC')->paginate(10);
+		$this->data['products'] = $this->_productRepository->paginate(10);
 
 		return view('admin.products.index', $this->data);
 	}
@@ -59,14 +79,16 @@ class ProductController extends Controller
 	 */
 	public function create()
 	{
-		$categories = Category::orderBy('name', 'ASC')->get();
-		$configurableAttributes = $this->_getConfigurableAttributes();
+		// $categories = Category::orderBy('name', 'ASC')->get();
+		// $configurableAttributes = $this->_getConfigurableAttributes();
 
-		$this->data['categories'] = $categories->toArray();
+		// $this->data['categories'] = $categories->toArray();
+		$this->data['categories'] = $this->_categoryRepository->getCategoryDropdown();
 		$this->data['product'] = null;
 		$this->data['productID'] = 0;
 		$this->data['categoryIDs'] = [];
-		$this->data['configurableAttributes'] = $configurableAttributes;
+		// $this->data['configurableAttributes'] = $configurableAttributes;
+		$this->data['configurableAttributes'] = $this->_attributeRepository->getConfigurableAttributes();
 
 		return view('admin.products.form', $this->data);
 	}
@@ -76,10 +98,10 @@ class ProductController extends Controller
 	 *
 	 * @return array
 	 */
-	private function _getConfigurableAttributes()
-	{
-		return Attribute::where('is_configurable', true)->get();
-	}
+	// private function _getConfigurableAttributes()
+	// {
+	// 	return Attribute::where('is_configurable', true)->get();
+	// }
 
 	/**
 	 * Generate attribute combination depend on the provided attributes
@@ -88,20 +110,20 @@ class ProductController extends Controller
 	 *
 	 * @return array
 	 */
-	private function _generateAttributeCombinations($arrays)
-	{
-		$result = [[]];
-		foreach ($arrays as $property => $property_values) {
-			$tmp = [];
-			foreach ($result as $result_item) {
-				foreach ($property_values as $property_value) {
-					$tmp[] = array_merge($result_item, array($property => $property_value));
-				}
-			}
-			$result = $tmp;
-		}
-		return $result;
-	}
+	// private function _generateAttributeCombinations($arrays)
+	// {
+	// 	$result = [[]];
+	// 	foreach ($arrays as $property => $property_values) {
+	// 		$tmp = [];
+	// 		foreach ($result as $result_item) {
+	// 			foreach ($property_values as $property_value) {
+	// 				$tmp[] = array_merge($result_item, array($property => $property_value));
+	// 			}
+	// 		}
+	// 		$result = $tmp;
+	// 	}
+	// 	return $result;
+	// }
 
 	/**
 	 * Convert variant attributes as variant name
@@ -110,21 +132,21 @@ class ProductController extends Controller
 	 *
 	 * @return string
 	 */
-	private function _convertVariantAsName($variant)
-	{
-		$variantName = '';
-		
-		foreach (array_keys($variant) as $key => $code) {
-			$attributeOptionID = $variant[$code];
-			$attributeOption = AttributeOption::find($attributeOptionID);
-			
-			if ($attributeOption) {
-				$variantName .= ' - ' . $attributeOption->name;
-			}
-		}
+	// private function _convertVariantAsName($variant)
+	// {
+	// 	$variantName = '';
 
-		return $variantName;
-	}
+	// 	foreach (array_keys($variant) as $key => $code) {
+	// 		$attributeOptionID = $variant[$code];
+	// 		$attributeOption = AttributeOption::find($attributeOptionID);
+
+	// 		if ($attributeOption) {
+	// 			$variantName .= ' - ' . $attributeOption->name;
+	// 		}
+	// 	}
+
+	// 	return $variantName;
+	// }
 
 	/**
 	 * Generate product variants for the configurable product
@@ -134,38 +156,38 @@ class ProductController extends Controller
 	 *
 	 * @return void
 	 */
-	private function _generateProductVariants($product, $params)
-	{
-		$configurableAttributes = $this->_getConfigurableAttributes();
+	// private function _generateProductVariants($product, $params)
+	// {
+	// 	$configurableAttributes = $this->_getConfigurableAttributes();
 
-		$variantAttributes = [];
-		foreach ($configurableAttributes as $attribute) {
-			$variantAttributes[$attribute->code] = $params[$attribute->code];
-		}
+	// 	$variantAttributes = [];
+	// 	foreach ($configurableAttributes as $attribute) {
+	// 		$variantAttributes[$attribute->code] = $params[$attribute->code];
+	// 	}
 
-		$variants = $this->_generateAttributeCombinations($variantAttributes);
-		
-		if ($variants) {
-			foreach ($variants as $variant) {
-				$variantParams = [
-					'parent_id' => $product->id,
-					'user_id' => Auth::user()->id,
-					'sku' => $product->sku . '-' .implode('-', array_values($variant)),
-					'type' => 'simple',
-					'name' => $product->name . $this->_convertVariantAsName($variant),
-				];
+	// 	$variants = $this->_generateAttributeCombinations($variantAttributes);
 
-				$variantParams['slug'] = Str::slug($variantParams['name']);
+	// 	if ($variants) {
+	// 		foreach ($variants as $variant) {
+	// 			$variantParams = [
+	// 				'parent_id' => $product->id,
+	// 				'user_id' => Auth::user()->id,
+	// 				'sku' => $product->sku . '-' .implode('-', array_values($variant)),
+	// 				'type' => 'simple',
+	// 				'name' => $product->name . $this->_convertVariantAsName($variant),
+	// 			];
 
-				$newProductVariant = Product::create($variantParams);
+	// 			$variantParams['slug'] = Str::slug($variantParams['name']);
 
-				$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
-				$newProductVariant->categories()->sync($categoryIds);
+	// 			$newProductVariant = Product::create($variantParams);
 
-				$this->_saveProductAttributeValues($newProductVariant, $variant, $product->id);
-			}
-		}
-	}
+	// 			$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
+	// 			$newProductVariant->categories()->sync($categoryIds);
+
+	// 			$this->_saveProductAttributeValues($newProductVariant, $variant, $product->id);
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * Save the product attribute values
@@ -176,21 +198,21 @@ class ProductController extends Controller
 	 *
 	 * @return void
 	 */
-	private function _saveProductAttributeValues($product, $variant, $parentProductID)
-	{
-		foreach (array_values($variant) as $attributeOptionID) {
-			$attributeOption = AttributeOption::find($attributeOptionID);
-		   
-			$attributeValueParams = [
-				'parent_product_id' => $parentProductID,
-				'product_id' => $product->id,
-				'attribute_id' => $attributeOption->attribute_id,
-				'text_value' => $attributeOption->name,
-			];
+	// private function _saveProductAttributeValues($product, $variant, $parentProductID)
+	// {
+	// 	foreach (array_values($variant) as $attributeOptionID) {
+	// 		$attributeOption = AttributeOption::find($attributeOptionID);
 
-			ProductAttributeValue::create($attributeValueParams);
-		}
-	}
+	// 		$attributeValueParams = [
+	// 			'parent_product_id' => $parentProductID,
+	// 			'product_id' => $product->id,
+	// 			'attribute_id' => $attributeOption->attribute_id,
+	// 			'text_value' => $attributeOption->name,
+	// 		];
+
+	// 		ProductAttributeValue::create($attributeValueParams);
+	// 	}
+	// }
 
 	/**
 	 * Store a newly created resource in storage.
@@ -202,22 +224,29 @@ class ProductController extends Controller
 	public function store(ProductRequest $request)
 	{
 		$params = $request->except('_token');
-		$params['slug'] = Str::slug($params['name']);
+		// $params['slug'] = Str::slug($params['name']);
 		$params['user_id'] = Auth::user()->id;
 
-		$product = DB::transaction(
-			function () use ($params) {
-				$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
-				$product = Product::create($params);
-				$product->categories()->sync($categoryIds);
+        if ($product = $this->_productRepository->create($params)) {
+            Session::flash('success', 'Product has been saved.');
+            return redirect('admin/products/'. $product->id .'/edit/');
+        } else {
+            Session::flash('error', 'Product could not be saved.');
+        }
 
-				if ($params['type'] == 'configurable') {
-					$this->_generateProductVariants($product, $params);
-				}
+		// $product = DB::transaction(
+		// 	function () use ($params) {
+		// 		$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
+		// 		$product = Product::create($params);
+		// 		$product->categories()->sync($categoryIds);
 
-				return $product;
-			}
-		);
+		// 		if ($params['type'] == 'configurable') {
+		// 			$this->_generateProductVariants($product, $params);
+		// 		}
+
+		// 		return $product;
+		// 	}
+		// );
 
 		if ($product) {
 			Session::flash('success', 'Product has been saved');
@@ -241,12 +270,14 @@ class ProductController extends Controller
 			return redirect('admin/products/create');
 		}
 
-		$product = Product::findOrFail($id);
+		// $product = Product::findOrFail($id);
+		$product = $this->_productRepository->findById($id);
 		$product->qty = isset($product->productInventory) ? $product->productInventory->qty : null;
 
-		$categories = Category::orderBy('name', 'ASC')->get();
+		// $categories = Category::orderBy('name', 'ASC')->get();
 
-		$this->data['categories'] = $categories->toArray();
+		// $this->data['categories'] = $categories->toArray();
+		$this->data['categories'] = $this->_categoryRepository->getCategoryDropdown();
 		$this->data['product'] = $product;
 		$this->data['productID'] = $product->id;
 		$this->data['categoryIDs'] = $product->categories->pluck('id')->toArray();
@@ -265,34 +296,42 @@ class ProductController extends Controller
 	public function update(ProductRequest $request, $id)
 	{
 		$params = $request->except('_token');
-		$params['slug'] = Str::slug($params['name']);
+		// $params['slug'] = Str::slug($params['name']);
 
-		$product = Product::findOrFail($id);
+        if ($this->_productRepository->update($params, $id)) {
+            Session::flash('success', 'Product has been saved');
+        } else {
+            Session::flash('error', 'Product could not be saved');
+        }
 
-		$saved = false;
-		$saved = DB::transaction(
-			function () use ($product, $params) {
-				$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
-				$product->update($params);
-				$product->categories()->sync($categoryIds);
+        return redirect('admin/products');
 
-				if ($product->type == 'configurable') {
-					$this->_updateProductVariants($params);
-				} else {
-					ProductInventory::updateOrCreate(['product_id' => $product->id], ['qty' => $params['qty']]);
-				}
+		// $product = Product::findOrFail($id);
 
-				return true;
-			}
-		);
+		// $saved = false;
+		// $saved = DB::transaction(
+		// 	function () use ($product, $params) {
+		// 		$categoryIds = !empty($params['category_ids']) ? $params['category_ids'] : [];
+		// 		$product->update($params);
+		// 		$product->categories()->sync($categoryIds);
 
-		if ($saved) {
-			Session::flash('success', 'Product has been saved');
-		} else {
-			Session::flash('error', 'Product could not be saved');
-		}
+		// 		if ($product->type == 'configurable') {
+		// 			$this->_updateProductVariants($params);
+		// 		} else {
+		// 			ProductInventory::updateOrCreate(['product_id' => $product->id], ['qty' => $params['qty']]);
+		// 		}
 
-		return redirect('admin/products');
+		// 		return true;
+		// 	}
+		// );
+
+		// if ($saved) {
+		// 	Session::flash('success', 'Product has been saved');
+		// } else {
+		// 	Session::flash('error', 'Product could not be saved');
+		// }
+
+		// return redirect('admin/products');
 	}
 
 	/**
@@ -302,20 +341,20 @@ class ProductController extends Controller
 	 *
 	 * @return void
 	 */
-	private function _updateProductVariants($params)
-	{
-		if ($params['variants']) {
-			foreach ($params['variants'] as $productParams) {
-				$product = Product::find($productParams['id']);
-				$product->update($productParams);
+	// private function _updateProductVariants($params)
+	// {
+	// 	if ($params['variants']) {
+	// 		foreach ($params['variants'] as $productParams) {
+	// 			$product = Product::find($productParams['id']);
+	// 			$product->update($productParams);
 
-				$product->status = $params['status'];
-				$product->save();
-				
-				ProductInventory::updateOrCreate(['product_id' => $product->id], ['qty' => $productParams['qty']]);
-			}
-		}
-	}
+	// 			$product->status = $params['status'];
+	// 			$product->save();
+
+	// 			ProductInventory::updateOrCreate(['product_id' => $product->id], ['qty' => $productParams['qty']]);
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * Remove the specified resource from storage.
@@ -326,13 +365,17 @@ class ProductController extends Controller
 	 */
 	public function destroy($id)
 	{
-		$product  = Product::findOrFail($id);
+        if ($this->_productRepository->delete($id)) {
+            Session::flash('success', 'Product has been deleted');
+        }
+        return redirect('admin/products');
+		// $product  = Product::findOrFail($id);
 
-		if ($product->delete()) {
-			Session::flash('success', 'Product has been deleted');
-		}
+		// if ($product->delete()) {
+		// 	Session::flash('success', 'Product has been deleted');
+		// }
 
-		return redirect('admin/products');
+		// return redirect('admin/products');
 	}
 
 	/**
@@ -348,7 +391,8 @@ class ProductController extends Controller
 			return redirect('admin/products/create');
 		}
 
-		$product = Product::findOrFail($id);
+		// $product = Product::findOrFail($id);
+		$product = $this->_productRepository->findById($id);
 
 		$this->data['productID'] = $product->id;
 		$this->data['productImages'] = $product->productImages;
@@ -369,7 +413,8 @@ class ProductController extends Controller
 			return redirect('admin/products');
 		}
 
-		$product = Product::findOrFail($id);
+		// $product = Product::findOrFail($id);
+		$product = $this->_productRepository->findById($id);
 
 		$this->data['productID'] = $product->id;
 		$this->data['product'] = $product;
@@ -387,35 +432,45 @@ class ProductController extends Controller
 	 */
 	public function uploadImage(ProductImageRequest $request, $id)
 	{
-		$product = Product::findOrFail($id);
+        if ($request->has('image')) {
+            $image = $request->file('image');
 
-		if ($request->has('image')) {
-			$image = $request->file('image');
-			$name = $product->slug . '_' . time();
-			$fileName = $name . '.' . $image->getClientOriginalExtension();
+            if ($this->_productRepository->addImage($id, $image)) {
+                Session::flash('success', 'Image has been uploaded');
+            } else {
+                Session::flash('error', 'Image could not be uploaded');
+            }
+            return redirect('admin/products/' . $id . '/images');
+        }
+		// $product = Product::findOrFail($id);
 
-			$folder = ProductImage::UPLOAD_DIR. '/images';
+		// if ($request->has('image')) {
+		// 	$image = $request->file('image');
+		// 	$name = $product->slug . '_' . time();
+		// 	$fileName = $name . '.' . $image->getClientOriginalExtension();
 
-			$filePath = $image->storeAs($folder . '/original', $fileName, 'public');
+		// 	$folder = ProductImage::UPLOAD_DIR. '/images';
 
-			$resizedImage = $this->_resizeImage($image, $fileName, $folder);
+		// 	$filePath = $image->storeAs($folder . '/original', $fileName, 'public');
 
-			$params = array_merge(
-				[
-					'product_id' => $product->id,
-					'path' => $filePath,
-				],
-				$resizedImage
-			);
+		// 	$resizedImage = $this->_resizeImage($image, $fileName, $folder);
 
-			if (ProductImage::create($params)) {
-				Session::flash('success', 'Image has been uploaded');
-			} else {
-				Session::flash('error', 'Image could not be uploaded');
-			}
+		// 	$params = array_merge(
+		// 		[
+		// 			'product_id' => $product->id,
+		// 			'path' => $filePath,
+		// 		],
+		// 		$resizedImage
+		// 	);
 
-			return redirect('admin/products/' . $id . '/images');
-		}
+		// 	if (ProductImage::create($params)) {
+		// 		Session::flash('success', 'Image has been uploaded');
+		// 	} else {
+		// 		Session::flash('error', 'Image could not be uploaded');
+		// 	}
+
+		// 	return redirect('admin/products/' . $id . '/images');
+		// }
 	}
 
 	/**
@@ -427,48 +482,48 @@ class ProductController extends Controller
 	 *
 	 * @return Response
 	 */
-	private function _resizeImage($image, $fileName, $folder)
-	{
-		$resizedImage = [];
+	// private function _resizeImage($image, $fileName, $folder)
+	// {
+	// 	$resizedImage = [];
 
-		$smallImageFilePath = $folder . '/small/' . $fileName;
-		$size = explode('x', ProductImage::SMALL);
-		list($width, $height) = $size;
+	// 	$smallImageFilePath = $folder . '/small/' . $fileName;
+	// 	$size = explode('x', ProductImage::SMALL);
+	// 	list($width, $height) = $size;
 
-		$smallImageFile = \Image::make($image)->fit($width, $height)->stream();
-		if (\Storage::put('public/' . $smallImageFilePath, $smallImageFile)) {
-			$resizedImage['small'] = $smallImageFilePath;
-		}
-		
-		$mediumImageFilePath = $folder . '/medium/' . $fileName;
-		$size = explode('x', ProductImage::MEDIUM);
-		list($width, $height) = $size;
+	// 	$smallImageFile = \Image::make($image)->fit($width, $height)->stream();
+	// 	if (\Storage::put('public/' . $smallImageFilePath, $smallImageFile)) {
+	// 		$resizedImage['small'] = $smallImageFilePath;
+	// 	}
 
-		$mediumImageFile = \Image::make($image)->fit($width, $height)->stream();
-		if (\Storage::put('public/' . $mediumImageFilePath, $mediumImageFile)) {
-			$resizedImage['medium'] = $mediumImageFilePath;
-		}
+	// 	$mediumImageFilePath = $folder . '/medium/' . $fileName;
+	// 	$size = explode('x', ProductImage::MEDIUM);
+	// 	list($width, $height) = $size;
 
-		$largeImageFilePath = $folder . '/large/' . $fileName;
-		$size = explode('x', ProductImage::LARGE);
-		list($width, $height) = $size;
+	// 	$mediumImageFile = \Image::make($image)->fit($width, $height)->stream();
+	// 	if (\Storage::put('public/' . $mediumImageFilePath, $mediumImageFile)) {
+	// 		$resizedImage['medium'] = $mediumImageFilePath;
+	// 	}
 
-		$largeImageFile = \Image::make($image)->fit($width, $height)->stream();
-		if (\Storage::put('public/' . $largeImageFilePath, $largeImageFile)) {
-			$resizedImage['large'] = $largeImageFilePath;
-		}
+	// 	$largeImageFilePath = $folder . '/large/' . $fileName;
+	// 	$size = explode('x', ProductImage::LARGE);
+	// 	list($width, $height) = $size;
 
-		$extraLargeImageFilePath  = $folder . '/xlarge/' . $fileName;
-		$size = explode('x', ProductImage::EXTRA_LARGE);
-		list($width, $height) = $size;
+	// 	$largeImageFile = \Image::make($image)->fit($width, $height)->stream();
+	// 	if (\Storage::put('public/' . $largeImageFilePath, $largeImageFile)) {
+	// 		$resizedImage['large'] = $largeImageFilePath;
+	// 	}
 
-		$extraLargeImageFile = \Image::make($image)->fit($width, $height)->stream();
-		if (\Storage::put('public/' . $extraLargeImageFilePath, $extraLargeImageFile)) {
-			$resizedImage['extra_large'] = $extraLargeImageFilePath;
-		}
+	// 	$extraLargeImageFilePath  = $folder . '/xlarge/' . $fileName;
+	// 	$size = explode('x', ProductImage::EXTRA_LARGE);
+	// 	list($width, $height) = $size;
 
-		return $resizedImage;
-	}
+	// 	$extraLargeImageFile = \Image::make($image)->fit($width, $height)->stream();
+	// 	if (\Storage::put('public/' . $extraLargeImageFilePath, $extraLargeImageFile)) {
+	// 		$resizedImage['extra_large'] = $extraLargeImageFilePath;
+	// 	}
+
+	// 	return $resizedImage;
+	// }
 
 	/**
 	 * Remove image
@@ -479,9 +534,11 @@ class ProductController extends Controller
 	 */
 	public function removeImage($id)
 	{
-		$image = ProductImage::findOrFail($id);
+		// $image = ProductImage::findOrFail($id);
+		$image = $this->_productRepository->findImageById($id);
 
-		if ($image->delete()) {
+		// if ($image->delete()) {
+		if ($this->_productRepository->removeImage($id)) {
 			Session::flash('success', 'Image has been deleted');
 		}
 
