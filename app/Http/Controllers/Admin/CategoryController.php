@@ -68,7 +68,7 @@ class CategoryController extends Controller
         // $params['parent_id'] = (int)$params['parent_id'];
 
         if ($this->categoryRepository->create($params)) {
-            Session::flash('success', 'Category has been saved');
+            Session::flash('success', 'Category has been saved.');
         }
         return redirect('admin/categories');
     }
@@ -139,7 +139,7 @@ class CategoryController extends Controller
         // $category  = Category::findOrFail($id);
 
         if ($this->categoryRepository->delete($id)) {
-            Session::flash('success', 'Category has been deleted');
+            Session::flash('success', 'Category has been deleted.');
         }
 
         return redirect('admin/categories');
