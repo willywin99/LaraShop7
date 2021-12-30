@@ -183,6 +183,7 @@ return [
 		Intervention\Image\ImageServiceProvider::class,
 
         App\Providers\AdminRepositoryServiceProvider::class,
+        App\Providers\FrontRepositoryServiceProvider::class,
 	],
 
 	/*
