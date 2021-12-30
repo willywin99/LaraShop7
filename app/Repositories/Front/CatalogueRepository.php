@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\AttributeOption;
 use App\Models\ProductAttributeValue;
 
+use Str;
+
 use App\Repositories\Front\Interfaces\CatalogueRepositoryInterface;
 
 class CatalogueRepository implements CatalogueRepositoryInterface
@@ -27,6 +29,11 @@ class CatalogueRepository implements CatalogueRepositoryInterface
     public function findBySlug($slug)
     {
         return Product::active()->where('slug', $slug)->firstOrFail();
+    }
+
+    public function findProductByID($productID)
+    {
+        return Product::findOrFail($productID);
     }
 
     public function getAttributeOptions($product, $attributeName)
@@ -64,7 +71,92 @@ class CatalogueRepository implements CatalogueRepositoryInterface
         return Product::max('price');
     }
 
+    public function getProductByAttributes($product, $params)
+    {
+        // $product = $this->findProductByID($params['product_id']);
+
+        // $product = Product::findOrFail($params['product_id']);
+		// $slug = $product->slug;
+
+		// $attributes = [];
+		// if ($product->configurable()) {
+		// 	$product = Product::from('products as p')
+		// 		->whereRaw(
+		// 			"p.parent_id = :parent_product_id
+		// 		and (select pav.text_value
+		// 				from product_attribute_values pav
+		// 				join attributes a on a.id = pav.attribute_id
+		// 				where a.code = :size_code
+		// 				and pav.product_id = p.id
+		// 				limit 1
+		// 			) = :size_value
+		// 		and (select pav.text_value
+		// 				from product_attribute_values pav
+		// 				join attributes a on a.id = pav.attribute_id
+		// 				where a.code = :color_code
+		// 				and pav.product_id = p.id
+		// 				limit 1
+		// 			) = :color_value
+		// 			",
+		// 			[
+		// 				'parent_product_id' => $product->id,
+		// 				'size_code' => 'size',
+		// 				'size_value' => $params['size'],
+		// 				'color_code' => 'color',
+		// 				'color_value' => $params['color'],
+		// 			]
+		// 		)->firstOrFail();
+
+		// 	$attributes['size'] = $params['size'];
+		// 	$attributes['color'] = $params['color'];
+		// }
+
+        // return $attributes;
+
+
+        return Product::from('products as p')
+            ->whereRaw(
+                "p.parent_id = :parent_product_id
+            and (select pav.text_value
+                    from product_attribute_values pav
+                    join attributes a on a.id = pav.attribute_id
+                    where a.code = :size_code
+                    and pav.product_id = p.id
+                    limit 1
+                ) = :size_value
+            and (select pav.text_value
+                    from product_attribute_values pav
+                    join attributes a on a.id = pav.attribute_id
+                    where a.code = :color_code
+                    and pav.product_id = p.id
+                    limit 1
+                ) = :color_value
+                ",
+                [
+                    'parent_product_id' => $product->id,
+                    'size_code' => 'size',
+                    'size_value' => $params['size'],
+                    'color_code' => 'color',
+                    'color_value' => $params['color'],
+                ]
+            )->firstOrFail();
+    }
+
+    public function checkProductInventory($product, $qtyRequested)
+    {
+        return $this->_checkProductInventory($product, $qtyRequested);
+    }
+
+
+
     // Private Method
+    private function _checkProductInventory($product, $itemQuantity)
+	{
+		if ($product->productInventory->qty < $itemQuantity) {
+			throw new \App\Exceptions\OutOfStockException('The product '. $product->sku .' is out of stock');
+		}
+	}
+
     private function searchProducts($products, $request)
 	{
 		if ($q = $request->query('q')) {
