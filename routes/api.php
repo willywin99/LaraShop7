@@ -19,6 +19,11 @@ Route::post('login', 'API\UserController@login');
 // Route::middleware('auth:api')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
+
+Route::middleware('client')->group(function () {
+    Route::get('products', 'API\ProductController@index');
+});
+
 Route::middleware('auth:api')->group(function () {
     Route::get('/profile', 'API\UserController@profile');
 });
