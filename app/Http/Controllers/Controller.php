@@ -7,6 +7,8 @@ use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Routing\Controller as BaseController;
 
+use App\Repositories\Front\CartRepository;
+
 /**
  * Controller
  */
@@ -19,6 +21,8 @@ class Controller extends BaseController
 
     protected $provinces = [];
 
+    private $cartRepository;
+
     /**
      * Create a new controller instance.
      *
@@ -27,6 +31,8 @@ class Controller extends BaseController
     public function __construct()
     {
         $this->initAdminMenu();
+
+        $this->cartRepository = new CartRepository();
     }
 
     /**
@@ -66,7 +72,8 @@ class Controller extends BaseController
         $isExistProvinceJson = \Storage::disk('local')->exists($provinceFilePath);
 
         if (!$isExistProvinceJson) {
-            $response = $this->rajaOngkirRequest('province');
+            // $response = $this->rajaOngkirRequest('province');
+            $response = $this->cartRepository->rajaOngkirRequest('province');
             \Storage::disk('local')->put($provinceFilePath, serialize($response['rajaongkir']['results']));
         }
 
@@ -97,7 +104,8 @@ class Controller extends BaseController
         $isExistCitiesJson = \Storage::disk('local')->exists($cityFilePath);
 
         if (!$isExistCitiesJson) {
-            $response = $this->rajaOngkirRequest('city', ['province' => $provinceId]);
+            // $response = $this->rajaOngkirRequest('city', ['province' => $provinceId]);
+            $response = $this->cartRepository->rajaOngkirRequest('city', ['province' => $provinceId]);
             \Storage::disk('local')->put($cityFilePath, serialize($response['rajaongkir']['results']));
         }
 
