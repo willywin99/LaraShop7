@@ -37,5 +37,7 @@ Route::middleware(['auth:api', 'sessions'])->group(function () {
 
     Route::get('carts/shipping-options', 'API\CartController@shippingOptions');
     Route::post('carts/set-shipping', 'API\CartController@setShipping');
+
+    Route::post('orders/checkout', 'API\OrderController@doCheckout');
 });
 

@@ -87,8 +87,11 @@ class CartRepository implements CartRepositoryInterface
     public function clear($sessionKey = null)
     {
         if ($sessionKey) {
+            Cart::session($sessionKey)->clearCartConditions();
             return Cart::session($sessionKey)->clear();
         }
+
+        Cart::clearCartConditions();
         return Cart::clear();
     }
 
@@ -165,6 +168,15 @@ class CartRepository implements CartRepositoryInterface
         return $totalWeight;
     }
 
+    public function getTotalQuantity($sessionKey = null)
+    {
+        if ($sessionKey) {
+            return Cart::session($sessionKey)->getTotalQuantity();
+        }
+
+        return Cart::getTotalQuantity();
+    }
+
     public function getSubTotal($sessionKey = null)
     {
         if ($sessionKey) {
@@ -183,13 +195,27 @@ class CartRepository implements CartRepositoryInterface
         return Cart::getTotal();
     }
 
+    public function getBaseTotalPrice($sessionKey = null)
+    {
+        $items = $this->getContent($sessionKey);
+
+        $baseTotalPrice = 0;
+        foreach ($items as $item) {
+            $baseTotalPrice += $item->getPriceSum();
+        }
+
+        return $baseTotalPrice;
+    }
+
     public function getConditionValue($name, $sessionKey = null)
     {
         if ($sessionKey) {
-            return !empty(Cart::session($sessionKey)->getCondition($name)) ? Cart::session($sessionKey)->getCondition($name)->getCalculatedValue($this->getSubTotal($sessionKey)) : null;
+            // return !empty(Cart::session($sessionKey)->getCondition($name)) ? Cart::session($sessionKey)->getCondition($name)->getCalculatedValue($this->getSubTotal($sessionKey)) : null;
+            return Cart::session($sessionKey)->getCondition($name);
         }
 
-        return !empty(Cart::getCondition($name)) ? Cart::getCondition($name)->getCalculatedValue($this->getSubTotal()) : null;
+        // return !empty(Cart::getCondition($name)) ? Cart::getCondition($name)->getCalculatedValue($this->getSubTotal()) : null;
+        return Cart::getCondition($name);
     }
 
     /**
